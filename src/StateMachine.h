@@ -3,7 +3,6 @@
 #include "State.h"
 #include "cinder/app/App.h"
 
-#include <cassert>
 #include <memory>
 #include <map>
 #include <string>
@@ -16,7 +15,7 @@ public:
 	using StatePtr = std::shared_ptr<State<SharedData>>;
 	using data_type = SharedData;
 
-	StateMachine() : mEnabled{ true }
+	StateMachine() : mInitialized{ false }, mEnabled{ true }
 	{
 		mData = std::make_shared<SharedData>();
 		init();
@@ -29,7 +28,7 @@ public:
 	void toggle() { mEnabled = !mEnabled; }
 
 	template<class State, class... Args>
-	void addState(const std::string& name, Args&&... args)
+	std::shared_ptr<State> addState(const std::string& name, Args&&... args)
 	{
 		auto result = mStates.insert(std::make_pair(name, std::make_shared<State>(std::forward<Args>(args)...)));
 		if (result.second)
@@ -37,7 +36,16 @@ public:
 			auto state = result.first->second;
 			state->setParent(this);
 			state->setup();
+			if (!mInitialized)
+			{
+				mInitialized = true;
+				mCurrentState = state;
+				mCurrentStateName = name;
+			}
+			return std::dynamic_pointer_cast<State>(state);
 		}
+
+		return nullptr;
 	}
 
 	void connect(const std::string &from, const std::string &to)
@@ -47,12 +55,16 @@ public:
 
 	void transition()
 	{
-		assert(!mCurrentStateName.empty());
-
 		auto it = mConnections.find(mCurrentStateName);
-		assert(it != mConnections.end());
 
-		transition(it->second);
+		if (it != mConnections.end())
+		{
+			transition(it->second);
+		}
+		else
+		{
+			transition("*");
+		}
 	}
 
 	void transition(const std::string &name)
@@ -62,17 +74,31 @@ public:
 			return;
 		}
 
-		auto it = mStates.find(name);
-		assert(it != mStates.end());
-
 		if (mCurrentState)
 		{
 			mCurrentState->onExit();
 		}
 
-		mCurrentState = it->second;
-		mCurrentStateName = name;
+		bool found = false;
+		auto it = mStates.find(name);
+		if (it != mStates.end())
+		{
+			mCurrentState = it->second;
+			found = true;
+		}
+		else if (name != "*")
+		{
+			auto it = mStates.find("*");
+			if (it != mStates.end())
+			{
+				mCurrentState = it->second;
+				found = true;
+			}
+		}
 
+		CI_ASSERT(found);
+
+		mCurrentStateName = name;
 		mCurrentState->onEnter();
 	}
 
@@ -80,20 +106,14 @@ public:
 
 	std::shared_ptr<SharedData> getSharedData() const { return mData; }
 
-	StatePtr getCurrentState() const 
-	{
-		assert(mCurrentState); return mCurrentState; 
-	}
+	StatePtr getCurrentState() const { return mCurrentState; }
 
-	std::string getCurrentStateName() const
-	{
-		return mCurrentStateName;
-	}
+	std::string getCurrentStateName() const { return mCurrentStateName; }
 
 	StatePtr getState(const std::string &name)
 	{
 		auto it = mStates.find(name);
-		
+
 		if (it != mStates.end())
 		{
 			return it->second;
@@ -129,6 +149,7 @@ private:
 	}
 
 private:
+	bool mInitialized;
 	bool mEnabled;
 	std::shared_ptr<SharedData> mData;
 

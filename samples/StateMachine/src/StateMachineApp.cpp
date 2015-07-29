@@ -47,8 +47,6 @@ void StateMachineApp::setup()
 	state_machine_.connect("Green", "Yellow");
 	state_machine_.connect("Yellow", "Red");
 	state_machine_.connect("Red", "Green");
-
-	state_machine_.transition("Green");
 }
 
 void StateMachineApp::mouseDown(MouseEvent event)

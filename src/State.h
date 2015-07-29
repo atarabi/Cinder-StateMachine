@@ -46,35 +46,35 @@ public:
 protected:
 	void transition() const
 	{
-		assert(mParent);
+		CI_ASSERT(mParent);
 
 		mParent->transition();
 	}
 
 	void transition(const std::string &name) const
 	{
-		assert(mParent);
+		CI_ASSERT(mParent);
 
 		mParent->transition(name);
 	}
 
 	std::shared_ptr<SharedData> getSharedData() const
 	{
-		assert(mParent);
+		CI_ASSERT(mParent);
 
 		return mParent->getSharedData();
 	}
 
 	std::string getCurrentStateName() const
 	{
-		assert(mParent);
+		CI_ASSERT(mParent);
 
 		return mParent->getCurrentStateName();
 	}
 
 	void getState(const std::string &name) const
 	{
-		assert(mParent);
+		CI_ASSERT(mParent);
 
 		return mParent->getState(name);
 	}

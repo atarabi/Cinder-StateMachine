@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<cinder>
+<block
+	name="StateMachine"
+	id="com.Atarabi.cinder.StateMachine"
+	author="Kareobana"
+	license="MIT"
+	summary="Simple state machine."
+	>
+	<headerPattern>src/*.h</headerPattern>
+	<includePath>src</includePath>
+</block>
+</cinder>

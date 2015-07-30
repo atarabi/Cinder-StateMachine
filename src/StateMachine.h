@@ -12,8 +12,9 @@ namespace atarabi {
 template<class SharedData = EmptyData>
 class StateMachine {
 public:
-	using StatePtr = std::shared_ptr<State<SharedData>>;
 	using data_type = SharedData;
+	using state_type = State<SharedData>;
+	using StatePtr = std::shared_ptr<State<SharedData>>;
 
 	StateMachine() : mInitialized{ false }, mEnabled{ true }
 	{
@@ -27,8 +28,10 @@ public:
 
 	void toggle() { mEnabled = !mEnabled; }
 
+	void setPostdraw(const std::function<void()> &postdraw) { mPostdraw = postdraw; }
+
 	template<class State, class... Args>
-	std::shared_ptr<State> addState(const std::string& name, Args&&... args)
+	std::shared_ptr<State> addState(const std::string &name, Args&&... args)
 	{
 		auto result = mStates.insert(std::make_pair(name, std::make_shared<State>(std::forward<Args>(args)...)));
 		if (result.second)
@@ -55,11 +58,11 @@ public:
 
 	void transition()
 	{
-		auto it = mConnections.find(mCurrentStateName);
+		std::string name = getConnectedName();
 
-		if (it != mConnections.end())
+		if (name != "")
 		{
-			transition(it->second);
+			transition(name);
 		}
 		else
 		{
@@ -110,6 +113,16 @@ public:
 
 	std::string getCurrentStateName() const { return mCurrentStateName; }
 
+	std::string getConnectedName() const
+	{
+		auto it = mConnections.find(mCurrentStateName);
+		if (it != mConnections.end())
+		{
+			return it->second;
+		}
+		return "";
+	}
+
 	StatePtr getState(const std::string &name)
 	{
 		auto it = mStates.find(name);
@@ -130,6 +143,7 @@ private:
 
 		app->getSignalUpdate().connect([this]() { if (mEnabled && mCurrentState) mCurrentState->update(); });
 		window->getSignalDraw().connect([this]() { if (mEnabled && mCurrentState) mCurrentState->draw(); });
+		window->getSignalPostDraw().connect([this]() { if (mEnabled && mPostdraw) mPostdraw(); });
 
 		window->getSignalMouseDown().connect([this](ci::app::MouseEvent &event) { if (mEnabled && mCurrentState) mCurrentState->mouseDown(event); });
 		window->getSignalMouseUp().connect([this](ci::app::MouseEvent &event) { if (mEnabled && mCurrentState) mCurrentState->mouseUp(event); });
@@ -151,6 +165,7 @@ private:
 private:
 	bool mInitialized;
 	bool mEnabled;
+	std::function<void()> mPostdraw;
 	std::shared_ptr<SharedData> mData;
 
 	std::map<std::string, StatePtr> mStates;

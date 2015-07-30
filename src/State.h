@@ -9,13 +9,22 @@ struct EmptyData {};
 template<class SharedData>
 class StateMachine;
 
+template<class SharedData>
+class State;
+
+template<class SharedData>
+using StateRef = std::shared_ptr<State<SharedData>>;
+
 template<class SharedData = EmptyData>
 class State {
 public:
+	using data_type = SharedData;
+	using state_machine_type = StateMachine<SharedData>;
+
 	State() : mParent{ nullptr } {}
 	virtual ~State() {}
 
-	void setParent(StateMachine<SharedData> *parent) { mParent = parent; }
+	void setParent(state_machine_type *parent) { mParent = parent; }
 
 	virtual void execute(const std::string &action) {}
 
@@ -72,7 +81,14 @@ protected:
 		return mParent->getCurrentStateName();
 	}
 
-	void getState(const std::string &name) const
+	std::string getConnectedName() const
+	{
+		CI_ASSERT(mParent);
+
+		return mParent->getConnectedName();
+	}
+
+	std::shared_ptr<State> getState(const std::string &name) const
 	{
 		CI_ASSERT(mParent);
 
@@ -80,7 +96,7 @@ protected:
 	}
 
 private:
-	StateMachine<SharedData> *mParent;
+	state_machine_type *mParent;
 };
 
 } //namespace end
